@@ -1,0 +1,28 @@
+default:
+  resource_limits:
+    cpu: "100m"
+    memory: "128Mi"
+  knative_limits:
+    min_scale: 1
+    max_scale: 5
+    target_concurrency: 1
+
+clusters:
+  - name: "cluster-2"
+    kubeconfig: "kubeconfig_cluster_2"
+
+scenarios:
+  - name: "scenario-1"
+    stages:
+      - name: "stage-1"
+        duration: 100 # in seconds
+        app_config:
+          app_image: "docker.io/jaceken/msc-cpu-processing-1"
+          name: "cpu-1"
+          env:
+            - name: "CPU_2_ADDRESS"
+              value: "default.svc.cluster.local"
+            - name: "CPU_3_ADDRESS"
+              value: "default.svc.cluster.local"
+            - name: "WORKLOAD"
+              value: "10000000"

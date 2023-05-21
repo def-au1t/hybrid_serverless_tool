@@ -1,0 +1,36 @@
+default:
+  resource_limits:
+    cpu: "100m"
+    memory: "128Mi"
+  knative_limits:
+    min_scale: 1
+    max_scale: 10
+    target_concurrency: 50
+
+clusters:
+  - name: "cluster-1"
+    kubeconfig: "path/to/kubeconfig-1"
+  - name: "cluster-2"
+    kubeconfig: "path/to/kubeconfig-2"
+
+scenarios:
+  - name: "scenario-1"
+    stages:
+      - name: "stage-1"
+        duration: 300 # in seconds
+        app_config:
+          app_image: "your-image-1"
+          env:
+            - name: "ENV_VAR1"
+              value: "env_value1"
+            - name: "ENV_VAR2"
+              value: "env_value2"
+      - name: "stage-2"
+        duration: 600 # in seconds
+        app_config:
+          app_image: "your-image-2"
+          env:
+            - name: "ENV_VAR1"
+              value: "env_value3"
+            - name: "ENV_VAR2"
+              value: "env_value4"
