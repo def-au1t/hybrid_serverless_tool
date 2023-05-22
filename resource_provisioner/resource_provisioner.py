@@ -90,7 +90,10 @@ class ResourceProvisioner:
         plural = "services"
 
         try:
+            # delete and wit for success
             api.delete_namespaced_custom_object(group, version, namespace, plural, service_name)
+            
+
             print(f"Knative Service '{service_name}' successfully removed from namespace '{namespace}' on cluster '{cluster_name}'.")
         except client.ApiException as e:
             if e.status == 404:

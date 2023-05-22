@@ -1,5 +1,6 @@
 from config_manager import ConfigManager
 from resource_provisioner import ResourceProvisioner
+from time import sleep
 
 
 def main():
@@ -22,7 +23,11 @@ def main():
     print(cluster_instances)
     print(scenarios)
 
-    provisioner.remove_service(cluster_name, "default", "cpu-1")
+    # sleep 20s
+    sleep(20)
+
+    for cluster_name in cluster_instances:
+        provisioner.remove_service(cluster_name, "default", "cpu-1")
 
 
 if __name__ == "__main__":
