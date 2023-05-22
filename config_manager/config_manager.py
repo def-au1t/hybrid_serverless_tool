@@ -1,60 +1,44 @@
 import yaml
+from kubernetes import client, config
 import os
-from kubernetes import client, config as kube_config
 
 
 class ConfigManager:
-    def __init__(self, config_file):
-        self.config_file = config_file
+    def __init__(self, config_path=None):
+        self.config_path = config_path
+        self.clusters = {}
+        self.apps = {}
+        self.scenarios = []
+        self.api_clients = {}
+        self.base_path = os.path.dirname(os.path.abspath(config_path))
+        self.load_config()
 
-        with open(self.config_file, 'r') as file:
-            self.config_data = yaml.safe_load(file)
+    def load_kube_config(self, cluster_config, force_reload=False):
+        cluster_name = cluster_config['name']
+        if not force_reload and cluster_name in self.api_clients:
+            return self.api_clients[cluster_name]
 
-        self.default = self.config_data.get('default', {})
-        self.clusters = self.config_data['clusters']
-        self.scenarios = self.config_data['scenarios']        
-        self.base_path = os.path.dirname(os.path.abspath(config_file))
+        kubeconfig_path = os.path.join(
+            self.base_path, 'config', cluster_config['kubeconfig'])
+        config.load_kube_config(config_file=kubeconfig_path)
+        api_client = client.ApiClient()
 
+        self.api_clients[cluster_name] = api_client
+        return api_client
 
-    def _apply_defaults(self, specific_config):
-        combined_config = self.default.copy()
-        combined_config.update(specific_config)
-        return combined_config
+    def load_config(self):
+        with open(self.config_path, 'r') as f:
+            configs = yaml.safe_load(f)
 
-    def get_cluster_instances(self):
-        cluster_instances = {}
-        for cluster in self.clusters:
-            name = cluster['name']
-            kubeconfig_path = os.path.join(self.base_path, 'config', cluster['kubeconfig'])
+        self.clusters = configs['clusters']
+        self.apps = configs['apps']
+        self.scenarios = configs['scenarios']
 
-            if not os.path.exists(kubeconfig_path):
-                raise FileNotFoundError(f"Kubeconfig not found at {kubeconfig_path}")
+    def get_cluster_by_name(self, cluster_name):
+        return next((c for c in self.clusters if c['name'] == cluster_name), None)
 
-            kube_config.load_kube_config(kubeconfig_path)
-            api_instance = client.CoreV1Api()
-            cluster_instances[name] = api_instance
+    def get_app_by_name(self, app_name):
+        return next((a for a in self.apps if a['name'] == app_name), None)
 
-        return cluster_instances
-
-    def get_scenarios(self):
-        scenarios_data = []
-        for scenario in self.scenarios:
-            scenario_name = scenario['name']
-            scenario_stages = []
-
-            for stage in scenario['stages']:
-                app_config = stage['app_config']
-                updated_app_config = self._apply_defaults(app_config)
-                stage_config = {
-                    'name': stage['name'],
-                    'duration': stage['duration'],
-                    'app_config': updated_app_config,
-                }
-                scenario_stages.append(stage_config)
-
-            scenarios_data.append({
-                'name': scenario_name,
-                'stages': scenario_stages,
-            })
-
-        return scenarios_data
+    def get_scenario_by_name(self, scenario_name):
+        return next((s for s in self.scenarios if s['name'] == scenario_name), None)
