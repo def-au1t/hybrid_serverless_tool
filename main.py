@@ -1,17 +1,28 @@
 from config_manager import ConfigManager
+from data_aggregator.data_aggregator import DataAggregator
 from resource_provisioner import ResourceProvisioner
 from benchmarking_orchestrator import BenchmarkingOrchestrator
-import time
+from metrics_collector import MetricsCollector
+
+from visualizer import Visualizer
+
+
+experiments = ["increasing_stage_2_and_3_containers"]
 
 
 def main():
-    config_manager = ConfigManager(config_path="experiment.yml")
+    # config_manager = ConfigManager(config_path="experiment.yml")
 
-    resource_provisioner = ResourceProvisioner(config_manager)
-    benchmark_orchestrator = BenchmarkingOrchestrator(
-        config_manager, resource_provisioner)
+    # resource_provisioner = ResourceProvisioner(config_manager)
+    # benchmark_orchestrator = BenchmarkingOrchestrator(
+    #     config_manager, resource_provisioner)
 
-    benchmark_orchestrator.run_benchmark("scenario-1")
+    for experiment in experiments:
+        # benchmark_orchestrator.run_benchmark(experiment)
+
+        aggregator = DataAggregator(experiment)
+        visualizer = Visualizer(aggregator)
+        visualizer.visualize()
 
 
 if __name__ == "__main__":

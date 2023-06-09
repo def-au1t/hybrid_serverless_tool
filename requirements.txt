@@ -1,3 +1,5 @@
 pyyaml
 kubernetes
 matplotlib
+prometheus-api-client
+seaborn

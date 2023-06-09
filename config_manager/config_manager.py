@@ -10,6 +10,7 @@ class ConfigManager:
         self.apps = {}
         self.scenarios = []
         self.api_clients = {}
+        self.metrics = {}
         self.base_path = os.path.dirname(os.path.abspath(config_path))
         self.load_config()
 
@@ -33,6 +34,7 @@ class ConfigManager:
         self.clusters = configs['clusters']
         self.apps = configs['apps']
         self.scenarios = configs['scenarios']
+        self.metrics = configs['metrics']
 
     def get_cluster_by_name(self, cluster_name):
         return next((c for c in self.clusters if c['name'] == cluster_name), None)
