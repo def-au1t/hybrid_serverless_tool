@@ -55,8 +55,8 @@ class Visualizer:
             plt.axvline(row['start_time'], color='gray', linestyle='--')
 
         ax.set_xlabel('Time')
-        ax.set_ylabel('Number of Requests')
-        ax.set_title('Number of Requests in Each Second by Response Code')
+        ax.set_ylabel('Req/Sec')
+        ax.set_title('Thorughput (requests per second)')
 
         # Add a legend
         ax.legend()
