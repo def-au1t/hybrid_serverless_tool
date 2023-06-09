@@ -7,18 +7,18 @@ from metrics_collector import MetricsCollector
 from visualizer import Visualizer
 
 
-experiments = ["increasing_stage_2_and_3_containers"]
+experiments = ["hybrid-serverless-2"]
 
 
 def main():
-    # config_manager = ConfigManager(config_path="experiment.yml")
+    config_manager = ConfigManager(config_path="experiment.yml")
 
-    # resource_provisioner = ResourceProvisioner(config_manager)
-    # benchmark_orchestrator = BenchmarkingOrchestrator(
-    #     config_manager, resource_provisioner)
+    resource_provisioner = ResourceProvisioner(config_manager)
+    benchmark_orchestrator = BenchmarkingOrchestrator(
+        config_manager, resource_provisioner)
 
     for experiment in experiments:
-        # benchmark_orchestrator.run_benchmark(experiment)
+        benchmark_orchestrator.run_benchmark(experiment)
 
         aggregator = DataAggregator(experiment)
         visualizer = Visualizer(aggregator)

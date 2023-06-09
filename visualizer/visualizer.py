@@ -153,6 +153,8 @@ class Visualizer:
         for _, row in self.stage_start_times.iterrows():
             plt.axvline(row['start_time'], color='gray', linestyle='--')
 
+        plt.yscale('log')
+
         plt.xlabel('Time')
         plt.ylabel('Latency Time (miliseconds)')
         plt.title('Mean Latency Times')
