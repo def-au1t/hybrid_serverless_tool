@@ -19,6 +19,7 @@ class Visualizer:
         self.plot_clusters_metrics()
         self.plot_knative_metrics()
         self.plot_results_throughput_aggregated_chart()
+        self.print_stages_times()
 
     def find_stage_start_times(self):
         df = self.results_df.copy()
@@ -247,3 +248,49 @@ class Visualizer:
         ax.legend()
 
         plt.savefig(output_file)
+
+    def print_box_plots_for_stages(self, input_df, columns, title, filename):
+        output_file = f'./results/{f"{self.scenario_name}/" if self.scenario_name else ""}chart_{filename}.png'
+
+        df = input_df.copy()
+        df['total_time'] = pd.to_timedelta(df['total_time'])
+        df['total_time_ms'] = df['total_time'].dt.total_seconds() * 1000
+
+        grouped_df = df.dropna(subset=columns).groupby(
+            'stage')[columns]
+
+        # Build the box plot
+        fig, ax = plt.subplots(figsize=(9, 6))
+
+        # For each group, plot
+        for i, (stage, data) in enumerate(grouped_df):
+            ax.violinplot(data.values, positions=[
+                          i*4+j for j in range(len(columns))], widths=9/(len(columns)*5))
+
+        # Set stage names as xticklabels
+        ax.set_xticks([i*4+(len(columns)//2) for i in range(len(grouped_df))])
+        ax.set_xticklabels(grouped_df.groups.keys())
+
+        # lgo scale
+        ax.set_yscale('log')
+
+        plt.xlabel('Stage')
+        plt.ylabel('Value')
+        plt.title(title)
+        plt.grid(True)
+        # plt.show()
+        plt.savefig(output_file)
+
+    def print_stages_times(self, df=None):
+        df = self.results_df.copy() if df is None else df
+        self.print_box_plots_for_stages(df, ['stage_1_total', 'stage_2_total', 'stage_3_total'],
+                                        'Processing stages total time for each experiment', 'stages_total_time')
+
+        self.print_box_plots_for_stages(df, ['stage_1_processing_time', 'stage_2_processing_time',
+                                             'stage_3_processing_time'], "Compute time for each experiment", 'stages_compute_time')
+
+        self.print_box_plots_for_stages(df, ['stage_1_latency_response', 'stage_2_latency_response', 'stage_3_latency_response'],
+                                        "Latency time for each experiment", 'stages_latency_time')
+
+        self.print_box_plots_for_stages(df, ['total_time_ms'],
+                                        "Total time for each experiment", 'total_time_ms')
