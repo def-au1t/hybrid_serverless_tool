@@ -265,7 +265,7 @@ class Visualizer:
         # For each group, plot
         for i, (stage, data) in enumerate(grouped_df):
             ax.violinplot(data.values, positions=[
-                          i*4+j for j in range(len(columns))], widths=9/(len(columns)*5))
+                          i*4+j for j in range(len(columns))], widths=9/(len(columns)*5), showextrema=True, showmedians=True)
 
         # Set stage names as xticklabels
         ax.set_xticks([i*4+(len(columns)//2) for i in range(len(grouped_df))])
