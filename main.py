@@ -1,5 +1,5 @@
 from config_manager import ConfigManager
-from data_aggregator.data_aggregator import DataAggregator
+from data_aggregator import DataAggregator
 from resource_provisioner import ResourceProvisioner
 from benchmarking_orchestrator import BenchmarkingOrchestrator
 from metrics_collector import MetricsCollector
@@ -7,7 +7,7 @@ from metrics_collector import MetricsCollector
 from visualizer import Visualizer
 
 
-experiments = ["hybrid-serverless-2"]
+experiments = ["1_centralized"]
 
 
 def main():
@@ -21,6 +21,7 @@ def main():
         benchmark_orchestrator.run_benchmark(experiment)
 
         aggregator = DataAggregator(experiment)
+        print(aggregator.results_df)
         visualizer = Visualizer(aggregator)
         visualizer.visualize()
 

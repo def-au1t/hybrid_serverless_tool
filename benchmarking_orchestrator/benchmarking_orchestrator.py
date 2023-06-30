@@ -45,20 +45,43 @@ class BenchmarkingOrchestrator:
                 writer.writerow(
                     [res["request_start"], res["response_timestamp"], stage, res["status_code"], res["response"]])
 
-    def _send_requests(self, app_url, concurrency, duration, post_data=None):
-        # Spawn the workers
-        with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
-            futures = [executor.submit(
-                self._send_requests_loop, app_url, duration, post_data) for _ in range(concurrency)]
-
-            # Collect results from all workers
-            results = [r for future in futures for r in future.result()]
-
-        return results
-
-    def _send_requests_loop(self, app_url, duration, post_data=None):
-        loop_results = []
+    def _send_requests(self, app_url, start_concurrency, end_concurrency, time_between_worker_spawns=0, duration=10, post_data=None):
+        # Initialize results list and start time
+        end_concurrency = start_concurrency if end_concurrency is None else end_concurrency
+        overall_results = []
         start_time = time.time()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=end_concurrency) as executor:
+            # List for storing futures
+            futures = []
+
+            # Spawning initial workers equal to start_concurrency
+            for _ in range(start_concurrency):
+                futures.append(executor.submit(
+                    self._send_requests_loop, app_url, start_time, duration, post_data))
+
+            # After starting the initial workers sleep for `time_between_worker_spawns`
+            time.sleep(time_between_worker_spawns)
+
+            # Spawning additional workers up to end_concurrency
+            for current_concurrency in range(start_concurrency + 1, end_concurrency + 1):
+                if time.time() - start_time >= duration:
+                    break
+                futures.append(executor.submit(
+                    self._send_requests_loop, app_url, start_time, duration, post_data))
+
+                # Wait for next worker spawn.
+                time.sleep(time_between_worker_spawns)
+
+            # Aggregating results from all workers
+            for future in futures:
+                overall_results.extend(future.result())
+
+        return overall_results
+
+    def _send_requests_loop(self, app_url, start_time, duration, post_data=None):
+        print("Spawned worker")
+        loop_results = []
 
         while time.time() - start_time < duration:
             result = self._send_single_request(app_url, post_data)
@@ -83,12 +106,20 @@ class BenchmarkingOrchestrator:
             }
 
         except requests.exceptions.RequestException as e:
-            result = {
-                "request_start": request_start,
-                "response_timestamp": datetime.now(),
-                "status_code": e.response.status_code,
-                "response": str(e),
-            }
+            if (e is None or e.response is None):
+                result = {
+                    "request_start": request_start,
+                    "response_timestamp": datetime.now(),
+                    "status_code": 500,
+                    "response": str(e),
+                }
+            else:
+                result = {
+                    "request_start": request_start,
+                    "response_timestamp": datetime.now(),
+                    "status_code": e.response.status_code,
+                    "response": str(e),
+                }
             time.sleep(0.5)
 
         return result
@@ -125,7 +156,7 @@ class BenchmarkingOrchestrator:
                     "value": 10
                 }
             }
-            results = self._send_requests(app_url, stage["concurrency"],
+            results = self._send_requests(app_url, stage["concurrency"], stage["max_concurrency"], stage["time_between_concurrency"],
                                           stage["stage_duration"], post_data)
             stage_end_time = datetime.now()
 

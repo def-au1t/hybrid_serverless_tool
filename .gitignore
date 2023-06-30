@@ -2,4 +2,5 @@ __pycache__
 config/*
 results/*
 !results/example
-```
+!results/1_centralized
+.DS_Store
