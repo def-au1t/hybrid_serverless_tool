@@ -1,0 +1,566 @@
+clusters:
+  - name: "edge-cluster"
+    kubeconfig: "kubeconfig_cluster_1"
+    prometheus_url: "http://localhost:8002/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+  - name: "desktop-cluster"
+    kubeconfig: "kubeconfig_cluster_2"
+    prometheus_url: "http://localhost:8001/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+  # - name: "cloud-cluster"
+  #   kubeconfig: "kubeconfig_cloud"
+  #   prometheus_url: "http://localhost:8003/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+
+
+
+metrics:
+  - "name": "memory"
+    "query": 'sum(container_memory_usage_bytes{container!="POD",container!=""})'
+  - "name": "cpu"
+    "query": 'sum(rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[1m]))'
+  - "name": "actual_pods"
+    "query": 'autoscaler_actual_pods'
+  - "name": "desired_pods"
+    "query": 'autoscaler_desired_pods'
+
+apps:
+  - name: "cpu-processing-1"
+    image: "docker.io/jaceken/msc-cpu-processing-1"
+    env:
+      - name: "CPU_2_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "CPU_3_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "WORKLOAD"
+        value: "10000000"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "cpu-processing-2"
+    image: "docker.io/jaceken/msc-cpu-processing-2"
+    env:
+      - name: "WORKLOAD"
+        value: "20000000"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "cpu-processing-3"
+    image: "docker.io/jaceken/msc-cpu-processing-3"
+    env:
+      - name: "WORKLOAD"
+        value: "40000000"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "io-intensive-1"
+    image: "docker.io/jaceken/msc-io-intensive-1"
+    env:
+      - name: "IO_2_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "IO_3_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "WORKLOAD"
+        value: "100000"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "io-intensive-2"
+    image: "docker.io/jaceken/msc-io-intensive-2"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+    env:
+      - name: "IO_2_ADDR"
+        value: "default.svc.cluster.local"
+  - name: "io-intensive-3"
+    image: "docker.io/jaceken/msc-io-intensive-3"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+    env:
+      - name: "IO_2_ADDR"
+        value: "default.svc.cluster.local"
+
+scenarios:
+  - name: "scenario-1"
+    stages:
+      - name: "stage-1-2usersonly"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+            env:
+              - name: "WORKLOAD"
+                value: "10000000"
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+        stage_duration: 120
+        concurrency: 2
+        app_target: "cpu-processing-1"
+      - name: "stage-2-01cpu"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+        stage_duration: 120
+        concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "stage-3-02cpu"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+            resource_limits:
+              cpu: "200m"
+              memory: "128Mi"
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+            resource_limits:
+              cpu: "200m"
+              memory: "128Mi"
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+            resource_limits:
+              cpu: "200m"
+              memory: "128Mi"
+        stage_duration: 120
+        concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "stage-3-02cpu-low"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+            resource_limits:
+              cpu: "200m"
+              memory: "128Mi"
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+            resource_limits:
+              cpu: "200m"
+              memory: "128Mi"
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+            resource_limits:
+              cpu: "200m"
+              memory: "128Mi"
+        stage_duration: 240
+        concurrency: 1
+        app_target: "cpu-processing-1"
+  - name: "increasing_stage_2_and_3_containers"
+    stages:
+      - name: "5-5-5"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+        stage_duration: 120
+        concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "5-6-6"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 5
+              target_concurrency: 1
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 6
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 6
+              target_concurrency: 1
+        stage_duration: 120
+        concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "5-6-7"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 5
+              target_concurrency: 1
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 6
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 7
+              target_concurrency: 1
+        stage_duration: 120
+        concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "single"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 5
+              target_concurrency: 1
+          - name: "cpu-processing-2"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 6
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-2"
+            knative_limits:
+              min_scale: 1
+              max_scale: 7
+              target_concurrency: 1
+        stage_duration: 120
+        concurrency: 2
+        app_target: "cpu-processing-1"
+  - name: "1_centralized"
+    stages:
+      - name: "target_concurrecy_1"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "1000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "2000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "4000000" 
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 20
+        time_between_concurrency: 20
+        app_target: "cpu-processing-1"
+      - name: "target_concurrency_input_7"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "1000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+          - name: "cpu-processing-2"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "2000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "4000000" 
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 20
+        time_between_concurrency: 20
+        app_target: "cpu-processing-1"
+  - name: "2_elastic_hybrid_architecture"
+    stages:
+      - name: "1_edge_only"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "edge-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "edge-cluster"
+          - name: "cpu-processing-3"
+            cluster: "edge-cluster"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 40
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "2_edge_cloud"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "CPU_2_ADDR"
+              value: "default.svc.cluster.local"
+            - name: "CPU_3_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "edge-cluster"
+          - name: "cpu-processing-3"
+            cluster: "cloud-cluster"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 40
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "3_more_cloud"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "CPU_2_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+            - name: "CPU_3_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+          - name: "cpu-processing-2"
+            cluster: "cloud-cluster"
+          - name: "cpu-processing-3"
+            cluster: "cloud-cluster"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 40
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "4_fully_distributed"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "CPU_2_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+            - name: "CPU_3_ADDR"
+              value: "default.172.16.0.215.sslip.io"
+          - name: "cpu-processing-2"
+            cluster: "cloud-cluster"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 40
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+  - name: "3_network_elastic_hybrid_architecture"
+    stages:
+      - name: "target_concurrecy_1"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "1000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "2000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "4000000" 
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 20
+        time_between_concurrency: 20
+        app_target: "cpu-processing-1"
+      - name: "target_concurrency_input_7"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "1000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+          - name: "cpu-processing-2"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "2000000"
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+          - name: "cpu-processing-3"
+            cluster: "cluster-1"
+            env:
+            - name: "WORKLOAD"
+              value: "4000000" 
+            resource_limits:
+              cpu: "200m"
+              memory: "256Mi"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 1
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 20
+        time_between_concurrency: 20
+        app_target: "cpu-processing-1"
+  - name: "4_energy_efficiency"
+    stages:
+      - name: "1_full_edge"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "edge-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "edge-cluster"
+          - name: "cpu-processing-3"
+            cluster: "edge-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 50
+        time_between_concurrency: 3
+        app_target: "cpu-processing-1"
+      - name: "2_edge_desktop"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "CPU_2_ADDR"
+              value: "default.172.16.0.215.sslip.io"
+            - name: "CPU_3_ADDR"
+              value: "default.172.16.0.215.sslip.io"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 50
+        time_between_concurrency: 3
+        app_target: "cpu-processing-1"
+      - name: "3_full_desktop"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 30
+              target_concurrency: 7
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 50
+        time_between_concurrency: 3
+        app_target: "cpu-processing-1"

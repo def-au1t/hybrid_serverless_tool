@@ -7,7 +7,7 @@ from metrics_collector import MetricsCollector
 from visualizer import Visualizer
 
 
-experiments = ["3_network_elastic_hybrid_architecture"]
+experiments = ["4_energy_efficiency"]
 
 
 def main():
