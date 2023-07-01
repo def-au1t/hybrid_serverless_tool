@@ -42,9 +42,9 @@ class DataAggregator:
         stage_1_totals = []
         stage_2_totals = []
         stage_3_totals = []
+        response_codes = []
 
         for index, row in df.iterrows():
-            response_result = "ok"
             stage_1_processing_time = None
             stage_2_processing_time = None
             stage_3_processing_time = None
@@ -60,11 +60,16 @@ class DataAggregator:
             stage_1_total = None
             stage_2_total = None
             stage_3_total = None
+
+            response_code = None
+
             if row["status_code"] == 200:
                 response_data = eval(row["response_data"])
                 timestamps = response_data["data"]["timestamps"]
                 result = response_data["data"]["result"]
-                if result == 484:
+
+                if timestamps["end_3"] != -1 and timestamps["end_2"] != -1 and timestamps["end_1"] != -1:
+                    response_code = row["status_code"]
                     stage_1_processing_time = timestamps["send_2"] - \
                         timestamps["start_1"]
                     stage_2_processing_time = timestamps["end_2"] - \
@@ -91,8 +96,9 @@ class DataAggregator:
                     stage_3_total = timestamps["receive_3"] - \
                         timestamps["send_3"]
                 else:
-                    response_result = "error"
-
+                    response_code = 500
+            else:
+                response_code = row["status_code"]
             stage_1_processing_times.append(stage_1_processing_time)
             stage_2_processing_times.append(stage_2_processing_time)
             stage_3_processing_times.append(stage_3_processing_time)
@@ -105,12 +111,13 @@ class DataAggregator:
             stage_1_totals.append(stage_1_total)
             stage_2_totals.append(stage_2_total)
             stage_3_totals.append(stage_3_total)
+            response_codes.append(response_code)
 
         new_df = pd.DataFrame({
             "start_time": pd.to_datetime(df["start_time"], format='%Y-%m-%d %H:%M:%S.%f'),
             "total_time": pd.to_datetime(df["end_time"], format='%Y-%m-%d %H:%M:%S.%f') - pd.to_datetime(df["start_time"], format='%Y-%m-%d %H:%M:%S.%f'),
             "stage": df["stage"],
-            "status_code": df["status_code"] if response_result == "ok" else 500,
+            "status_code": response_codes,
             "stage_1_processing_time": stage_1_processing_times,
             "stage_2_processing_time": stage_2_processing_times,
             "stage_3_processing_time": stage_3_processing_times,

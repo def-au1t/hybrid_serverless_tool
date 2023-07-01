@@ -1,0 +1,179 @@
+clusters:
+  - name: "edge-cluster"
+    kubeconfig: "kubeconfig_cluster_1"
+    prometheus_url: "http://localhost:8002/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+  - name: "desktop-cluster"
+    kubeconfig: "kubeconfig_cluster_2"
+    prometheus_url: "http://localhost:8001/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+  - name: "cloud-cluster"
+    kubeconfig: "kubeconfig_cloud"
+    prometheus_url: "http://localhost:8003/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+
+
+
+metrics:
+  - "name": "memory"
+    "query": 'sum(container_memory_usage_bytes{container!="POD",container!=""})'
+  - "name": "cpu"
+    "query": 'sum(rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[1m]))'
+  - "name": "actual_pods"
+    "query": 'autoscaler_actual_pods'
+  - "name": "desired_pods"
+    "query": 'autoscaler_desired_pods'
+
+apps:
+  - name: "cpu-processing-1"
+    image: "docker.io/jaceken/msc-cpu-processing-1"
+    env:
+      - name: "CPU_2_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "CPU_3_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "WORKLOAD"
+        value: "10000000"
+    resource_limits:
+      cpu: "500m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "cpu-processing-2"
+    image: "docker.io/jaceken/msc-cpu-processing-2"
+    env:
+      - name: "WORKLOAD"
+        value: "20000000"
+    resource_limits:
+      cpu: "500m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "cpu-processing-3"
+    image: "docker.io/jaceken/msc-cpu-processing-3"
+    env:
+      - name: "WORKLOAD"
+        value: "40000000"
+    resource_limits:
+      cpu: "500m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "io-intensive-1"
+    image: "docker.io/jaceken/msc-io-intensive-1"
+    env:
+      - name: "IO_2_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "IO_3_ADDR"
+        value: "default.svc.cluster.local"
+      - name: "WORKLOAD"
+        value: "100000"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+  - name: "io-intensive-2"
+    image: "docker.io/jaceken/msc-io-intensive-2"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+    env:
+      - name: "IO_2_ADDR"
+        value: "default.svc.cluster.local"
+  - name: "io-intensive-3"
+    image: "docker.io/jaceken/msc-io-intensive-3"
+    resource_limits:
+      cpu: "200m"
+      memory: "256Mi"
+    knative_limits:
+      min_scale: 1
+      max_scale: 30
+      target_concurrency: 1
+    env:
+      - name: "IO_2_ADDR"
+        value: "default.svc.cluster.local"
+
+scenarios:
+  - name: "2_elastic_hybrid_architecture"
+    stages:
+      - name: "1_edge_only"
+        apps:
+          - name: "io-intensive-1"
+            cluster: "edge-cluster"
+          - name: "io-intensive-2"
+            cluster: "edge-cluster"
+          - name: "io-intensive-3"
+            cluster: "edge-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 7
+        time_between_concurrency: 20
+        app_target: "io-intensive-1"
+      - name: "2_edge_cloud"
+        apps:
+          - name: "io-intensive-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "WORKLOAD"
+              value: "100000"
+            - name: "IO_3_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+          - name: "io-intensive-2"
+            cluster: "edge-cluster"
+          - name: "io-intensive-3"
+            cluster: "cloud-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 7
+        time_between_concurrency: 20
+        app_target: "io-intensive-1"
+      - name: "3_more_cloud"
+        apps:
+          - name: "io-intensive-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "WORKLOAD"
+              value: "100000"
+            - name: "IO_2_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+            - name: "IO_3_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+          - name: "io-intensive-2"
+            cluster: "cloud-cluster"
+          - name: "io-intensive-3"
+            cluster: "cloud-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 7
+        time_between_concurrency: 20
+        app_target: "io-intensive-1"
+      - name: "4_fully_distributed"
+        apps:
+          - name: "io-intensive-1"
+            cluster: "edge-cluster"
+            env:
+            - name: "WORKLOAD"
+              value: "100000"
+            - name: "IO_2_ADDR"
+              value: "default.5.78.46.91.sslip.io"
+            - name: "IO_3_ADDR"
+              value: "default.172.16.0.215.sslip.io"
+          - name: "io-intensive-2"
+            cluster: "cloud-cluster"
+          - name: "io-intensive-3"
+            cluster: "desktop-cluster"
+        stage_duration: 300
+        concurrency: 1
+        max_concurrency: 7
+        time_between_concurrency: 20
+        app_target: "io-intensive-1"

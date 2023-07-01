@@ -57,7 +57,7 @@ class Visualizer:
 
         ax.set_xlabel('Time')
         ax.set_ylabel('Req/Sec')
-        ax.set_title('Thorughput (requests per second)')
+        ax.set_title('Throughput (requests per second)')
 
         # Add a legend
         ax.legend()

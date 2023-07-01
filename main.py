@@ -7,7 +7,7 @@ from metrics_collector import MetricsCollector
 from visualizer import Visualizer
 
 
-experiments = ["1_centralized"]
+experiments = ["3_network_elastic_hybrid_architecture"]
 
 
 def main():
@@ -21,6 +21,7 @@ def main():
         benchmark_orchestrator.run_benchmark(experiment)
 
         aggregator = DataAggregator(experiment)
+        aggregator.results_df.to_csv("results.csv")
         print(aggregator.results_df)
         visualizer = Visualizer(aggregator)
         visualizer.visualize()

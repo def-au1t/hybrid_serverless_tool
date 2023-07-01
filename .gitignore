@@ -3,4 +3,6 @@ config/*
 results/*
 !results/example
 !results/1_centralized
+!results/2_elastic_hybrid_architecture
+!results/3_network_elastic_hybrid_architecture
 .DS_Store
