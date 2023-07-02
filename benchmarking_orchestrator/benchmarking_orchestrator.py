@@ -45,7 +45,7 @@ class BenchmarkingOrchestrator:
                 writer.writerow(
                     [res["request_start"], res["response_timestamp"], stage, res["status_code"], res["response"]])
 
-    def _send_requests(self, app_url, start_concurrency, end_concurrency, time_between_worker_spawns=0, duration=10, post_data=None):
+    def _send_requests(self, app_url, start_concurrency, end_concurrency, sleep_time=0, time_between_worker_spawns=0, duration=10, post_data=None):
         # Initialize results list and start time
         end_concurrency = start_concurrency if end_concurrency is None else end_concurrency
         overall_results = []
@@ -58,7 +58,7 @@ class BenchmarkingOrchestrator:
             # Spawning initial workers equal to start_concurrency
             for _ in range(start_concurrency):
                 futures.append(executor.submit(
-                    self._send_requests_loop, app_url, start_time, duration, post_data))
+                    self._send_requests_loop, app_url, start_time, duration, int(sleep_time)))
 
             # After starting the initial workers sleep for `time_between_worker_spawns`
             time.sleep(time_between_worker_spawns)
@@ -68,7 +68,7 @@ class BenchmarkingOrchestrator:
                 if time.time() - start_time >= duration:
                     break
                 futures.append(executor.submit(
-                    self._send_requests_loop, app_url, start_time, duration, post_data))
+                    self._send_requests_loop, app_url, start_time, duration, int(sleep_time)))
 
                 # Wait for next worker spawn.
                 time.sleep(time_between_worker_spawns)
@@ -79,23 +79,24 @@ class BenchmarkingOrchestrator:
 
         return overall_results
 
-    def _send_requests_loop(self, app_url, start_time, duration, post_data=None):
+    def _send_requests_loop(self, app_url, start_time, duration, sleep_time):
         print("Spawned worker")
         loop_results = []
 
         while time.time() - start_time < duration:
-            result = self._send_single_request(app_url, post_data)
+            result = self._send_single_request(app_url, sleep_time)
             loop_results.append(result)
 
         return loop_results
 
-    def _send_single_request(self, app_url, post_data=None):
+    def _send_single_request(self, app_url, sleep_time):
         headers = {"Content-Type": "application/json"}
 
         request_start = datetime.now()
 
         try:
-            response = requests.post(app_url, json=post_data, headers=headers)
+            response = requests.post(
+                app_url, json={"data": {"value": 10}}, headers=headers)
             response.raise_for_status()
 
             result = {
@@ -104,6 +105,8 @@ class BenchmarkingOrchestrator:
                 "status_code": response.status_code,
                 "response": response.text,
             }
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
         except requests.exceptions.RequestException as e:
             if (e is None or e.response is None):
@@ -151,13 +154,8 @@ class BenchmarkingOrchestrator:
             if not app_url:
                 raise Exception(f"Failed to get URL for app '{app_name}'")
 
-            post_data = {
-                "data": {
-                    "value": 10
-                }
-            }
-            results = self._send_requests(app_url, stage["concurrency"], stage["max_concurrency"], stage["time_between_concurrency"],
-                                          stage["stage_duration"], post_data)
+            results = self._send_requests(app_url, stage["concurrency"], stage["max_concurrency"], stage["sleep_time"] if "sleep_time" in stage else 0, stage["time_between_concurrency"],
+                                          stage["stage_duration"])
             stage_end_time = datetime.now()
 
             # Saving metrics

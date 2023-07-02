@@ -5,9 +5,9 @@ clusters:
   - name: "desktop-cluster"
     kubeconfig: "kubeconfig_cluster_2"
     prometheus_url: "http://localhost:8001/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
-  # - name: "cloud-cluster"
-  #   kubeconfig: "kubeconfig_cloud"
-  #   prometheus_url: "http://localhost:8003/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
+  - name: "cloud-cluster"
+    kubeconfig: "kubeconfig_cloud"
+    prometheus_url: "http://localhost:8003/api/v1/namespaces/default/services/prometheus-operated:9090/proxy" 
 
 
 
@@ -104,155 +104,6 @@ apps:
         value: "default.svc.cluster.local"
 
 scenarios:
-  - name: "scenario-1"
-    stages:
-      - name: "stage-1-2usersonly"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-            env:
-              - name: "WORKLOAD"
-                value: "10000000"
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-        stage_duration: 120
-        concurrency: 2
-        app_target: "cpu-processing-1"
-      - name: "stage-2-01cpu"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-        stage_duration: 120
-        concurrency: 10
-        app_target: "cpu-processing-1"
-      - name: "stage-3-02cpu"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-            resource_limits:
-              cpu: "200m"
-              memory: "128Mi"
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-            resource_limits:
-              cpu: "200m"
-              memory: "128Mi"
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-            resource_limits:
-              cpu: "200m"
-              memory: "128Mi"
-        stage_duration: 120
-        concurrency: 10
-        app_target: "cpu-processing-1"
-      - name: "stage-3-02cpu-low"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-            resource_limits:
-              cpu: "200m"
-              memory: "128Mi"
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-            resource_limits:
-              cpu: "200m"
-              memory: "128Mi"
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-            resource_limits:
-              cpu: "200m"
-              memory: "128Mi"
-        stage_duration: 240
-        concurrency: 1
-        app_target: "cpu-processing-1"
-  - name: "increasing_stage_2_and_3_containers"
-    stages:
-      - name: "5-5-5"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-        stage_duration: 120
-        concurrency: 10
-        app_target: "cpu-processing-1"
-      - name: "5-6-6"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 5
-              target_concurrency: 1
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 6
-              target_concurrency: 1
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 6
-              target_concurrency: 1
-        stage_duration: 120
-        concurrency: 10
-        app_target: "cpu-processing-1"
-      - name: "5-6-7"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 5
-              target_concurrency: 1
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 6
-              target_concurrency: 1
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 7
-              target_concurrency: 1
-        stage_duration: 120
-        concurrency: 10
-        app_target: "cpu-processing-1"
-      - name: "single"
-        apps:
-          - name: "cpu-processing-1"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 5
-              target_concurrency: 1
-          - name: "cpu-processing-2"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 6
-              target_concurrency: 1
-          - name: "cpu-processing-3"
-            cluster: "cluster-2"
-            knative_limits:
-              min_scale: 1
-              max_scale: 7
-              target_concurrency: 1
-        stage_duration: 120
-        concurrency: 2
-        app_target: "cpu-processing-1"
   - name: "1_centralized"
     stages:
       - name: "target_concurrecy_1"
@@ -563,4 +414,180 @@ scenarios:
         concurrency: 1
         max_concurrency: 50
         time_between_concurrency: 3
+        app_target: "cpu-processing-1"
+  - name: "5_autoscaler"
+    stages:
+      - name: "1_small"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 12
+              target_concurrency: 7
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 12
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 12
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 30
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "2_medium"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 4
+              target_concurrency: 7
+              resource_limits:
+                cpu: "600m"
+                memory: "768Mi"
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 4
+              target_concurrency: 1
+              resource_limits:
+                cpu: "600m"
+                memory: "768Mi"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 4
+              target_concurrency: 1
+              resource_limits:
+                cpu: "600m"
+                memory: "768Mi"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 30
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+      - name: "3_huge"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 1
+              target_concurrency: 7
+              resource_limits:
+                cpu: "2400m"
+                memory: " 3072M"
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "2400m"
+                memory: " 3072M"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "2400m"
+                memory: " 3072M"
+        stage_duration: 450
+        concurrency: 1
+        max_concurrency: 30
+        time_between_concurrency: 10
+        app_target: "cpu-processing-1"
+  - name: "6_cold_starts"
+    stages:
+      - name: "with_scale_to_zero"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 0
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 0
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 0
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+        stage_duration: 640
+        concurrency: 1
+        max_concurrency: 1
+        sleep_time: 125
+        time_between_concurrency: 0
+        app_target: "cpu-processing-1"
+      - name: "without_scale_to_zero"
+        apps:
+          - name: "cpu-processing-1"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: "cpu-processing-2"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+          - name: "cpu-processing-3"
+            cluster: "desktop-cluster"
+            knative_limits:
+              min_scale: 1
+              max_scale: 1
+              target_concurrency: 1
+              resource_limits:
+                cpu: "200m"
+                memory: "256Mi"
+        stage_duration: 100
+        concurrency: 1
+        max_concurrency: 1
+        sleep_time: 5
+        time_between_concurrency: 0
         app_target: "cpu-processing-1"

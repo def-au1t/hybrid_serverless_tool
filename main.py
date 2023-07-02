@@ -7,7 +7,7 @@ from metrics_collector import MetricsCollector
 from visualizer import Visualizer
 
 
-experiments = ["4_energy_efficiency"]
+experiments = ["6_cold_starts"]
 
 
 def main():

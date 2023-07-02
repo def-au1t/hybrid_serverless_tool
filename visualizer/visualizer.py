@@ -256,6 +256,8 @@ class Visualizer:
         df['total_time'] = pd.to_timedelta(df['total_time'])
         df['total_time_ms'] = df['total_time'].dt.total_seconds() * 1000
 
+        df = df[df['status_code'] == 200]
+
         grouped_df = df.dropna(subset=columns).groupby(
             'stage')[columns]
 
@@ -289,7 +291,7 @@ class Visualizer:
         self.print_box_plots_for_stages(df, ['stage_1_processing_time', 'stage_2_processing_time',
                                              'stage_3_processing_time'], "Compute time for each experiment", 'stages_compute_time')
 
-        self.print_box_plots_for_stages(df, ['stage_1_latency_response', 'stage_2_latency_response', 'stage_3_latency_response'],
+        self.print_box_plots_for_stages(df, ['stage_1_latency_start', 'stage_2_latency_start', 'stage_3_latency_start'],
                                         "Latency time for each experiment", 'stages_latency_time')
 
         self.print_box_plots_for_stages(df, ['total_time_ms'],

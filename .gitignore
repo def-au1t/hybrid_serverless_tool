@@ -6,4 +6,6 @@ results/*
 !results/2_elastic_hybrid_architecture
 !results/3_network_elastic_hybrid_architecture
 !results/4_energy_efficiency
+!results/5_autoscaler
+!results/6_cold_starts
 .DS_Store
